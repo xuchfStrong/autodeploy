@@ -1,4 +1,4 @@
-###说明
+### 说明
 - autodeploy是用django开发的管理ansible任务的。
 - 采用django开发的web后端，用vue开发的web前端。
 - dist文件夹是编译后的前端资源文件，直接用django自带的python manage.py runserver运行就能访问
