@@ -1,0 +1,16 @@
+database:
+  type: mysql
+  users:
+    ambari: 
+    root: 
+    zabbix: 
+    sentry: 
+ambari_server: {}
+ambari_agent: {}
+kibana: {}
+elasticsearch: {}
+mongodb: {}
+redis: {}
+repository_server: {}
+ldap: {}
+

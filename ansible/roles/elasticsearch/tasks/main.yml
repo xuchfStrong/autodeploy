@@ -1,0 +1,123 @@
+---
+- name: create /opt/bigdata and /root/deploy directories
+  file: path={{ item }} state=directory owner=root group=root mode=0755
+  with_items:
+  - /opt/bigdata
+  - /root/deploy
+  - /data
+  tags:
+  - elastic-common
+  - elastic-common-elasticsearch
+  - elastic-common-logstash
+  - elastic-common-kibana
+
+- name: create elastic user group
+  group: name=elastic state=present
+  tags:
+  - elastic-common
+  - elastic-common-elasticsearch
+
+- name: create elastic user
+  user: name=elastic group=elastic createhome=no shell=/sbin/nologin state=present
+  tags:
+  - elastic-common
+  - elastic-common-elasticsearch
+  
+- name: create /data/elasticsearch directories
+  file: path={{ item }} state=directory owner=elastic group=elastic mode=0755
+  with_items:
+  - /data/elasticsearch
+  tags:
+  - elastic-common
+  - elastic-common-elasticsearch
+
+- name: download elasticsearch
+  get_url:
+    url: http://{{ repository_server[0]['ip'] }}:{{ repository_server[0]['port'] }}/tools/ELK/elasticsearch-6.4.3.tar.gz
+    dest: /root/deploy
+  tags:
+  - elastic-common
+  - elastic-common-elasticsearch
+
+- name: unarchive elasticsearch
+  shell: tar -zxf /root/deploy/elasticsearch-6.4.3.tar.gz
+  args:
+    chdir: /opt/bigdata
+    creates: /opt/bigdata/elasticsearch-6.4.3
+  tags:
+  - elastic-common
+  - elastic-common-elasticsearch
+  
+- name: copy elasticsearch service init script
+  copy: src=elasticsearch.service dest=/usr/lib/systemd/system/elasticsearch.service owner=root group=root mode=0644
+  tags:
+  - elastic-common
+  - elastic-common-elasticsearch
+  - elastic-common-elasticsearch-service
+
+- name: configure elasticsearch
+  template: src=jvm.options.j2 dest=/opt/bigdata/elasticsearch-6.4.3/config/jvm.options owner=elastic group=elastic mode=0755 backup=yes
+  tags:
+  - elastic-common
+  - elastic-common-elasticsearch
+  - elastic-common-elasticsearch-jvm
+
+- name: configure elasticsearch
+  template: src=elasticsearch.yml.j2 dest=/opt/bigdata/elasticsearch-6.4.3/config/elasticsearch.yml owner=elastic group=elastic mode=0755 backup=yes
+  notify: restart elasticsearch
+  tags:
+  - elastic-common
+  - elastic-common-elasticsearch
+  - elastic-common-elasticsearch-conf
+
+- name: create elasticsearch plugins and initializers directories
+  file: path=/opt/bigdata/elasticsearch-6.4.3/{{ item }} state=directory owner=elastic group=elastic mode=0755
+  with_items:
+  - plugins
+  - initializers
+  tags:
+  - elastic-common
+  - elastic-common-elasticsearch
+  - elastic-common-elasticsearch-plugins
+
+- name: create elasticsearch logs and run directories
+  file: path=/opt/bigdata/elasticsearch-6.4.3/{{ item }} state=directory owner=elastic group=elastic
+  with_items:
+  - logs
+  - run
+  tags:
+  - elastic-common
+  - elastic-common-elasticsearch
+  
+- name: create elasticsearch-keystore
+  shell: /opt/bigdata/elasticsearch-6.4.3/bin/elasticsearch-keystore create
+  tags:
+  - elastic-common
+  - elastic-common-elasticsearch
+
+- name: set /opt/bigdata/elasticsearch-6.4.3 permissions
+  file: path=/opt/bigdata/elasticsearch-6.4.3 state=directory owner=elastic group=elastic recurse=yes
+  tags:
+  - elastic-common
+  - elastic-common-elasticsearch
+  - elastic-common-elasticsearch-plugins
+
+- name: reload systemd service
+  service: name=elasticsearch state=started enabled=yes
+  tags:
+  - elastic-common
+  - elastic-common-elasticsearch
+  - elastic-common-elasticsearch-service  
+  
+- name: start elasticsearch service
+  systemd: name=elasticsearch state=started enabled=yes daemon-reload=yes
+  tags:
+  - elastic-common
+  - elastic-common-elasticsearch
+  - elastic-common-elasticsearch-service
+  
+- name: clear /root/deploy directory
+  file: path=/root/deploy state=absent
+  tags:
+  - elastic-common
+  - elastic-common-elasticsearch

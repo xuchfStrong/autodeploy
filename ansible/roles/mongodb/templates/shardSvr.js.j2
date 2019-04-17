@@ -1,0 +1,12 @@
+rs.initiate(
+  {
+    _id:"myShard_1",
+    members:[
+{% for i in mongodb %}
+      {_id:{{ loop.index }}, host:"{{ i['ip']+':27018'}}"{% if loop.first %},priority:2{% endif %}}{% if not loop.last %},
+{% endif %}
+{% endfor %}
+
+    ]
+  }
+)

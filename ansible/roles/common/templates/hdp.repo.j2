@@ -1,0 +1,15 @@
+#VERSION_NUMBER=2.6.5.0-292
+[HDP-2.6.5.0]
+name=HDP Version - HDP-2.6.5.0
+baseurl=http://{{ repository_server[0]['ip'] }}:{{ repository_server[0]['port'] }}/HDP/centos7/2.6.5.0-292
+gpgcheck=0
+enabled=1
+priority=1
+
+
+[HDP-UTILS-1.1.0.22]
+name=HDP-UTILS Version - HDP-UTILS-1.1.0.22
+baseurl=http://{{ repository_server[0]['ip'] }}:{{ repository_server[0]['port'] }}/HDP-UTILS/centos7/1.1.0.22
+gpgcheck=0
+enabled=1
+priority=1

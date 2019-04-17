@@ -1,0 +1,210 @@
+---
+- name: create /root/deploy directory
+  file: path={{ item }} state=directory owner=root group=root mode=0755
+  with_items:
+  - /root/deploy
+  tags:
+  - ldap-common
+
+- name: install package for ldap and keepalived
+  yum: name={{ item }} state=present
+  with_items:
+  - openldap
+  - openldap-servers
+  - openldap-clients
+  - compat-openldap
+  - keepalived
+  tags:
+  - ldap-common
+  
+- name: Copy the DB template
+  copy: src=DB_CONFIG dest=/var/lib/ldap/DB_CONFIG owner=ldap group=ldap mode=0644
+  tags:
+  - ldap-common
+ 
+- name: start ldap service
+  systemd: name={{ item }} state=started enabled=yes daemon-reload=yes
+  with_items:
+  - slapd
+  tags:
+  - ldap-common
+
+- name: Generate the admin password for ldap
+  shell: slappasswd -s {{ olcRootPW }}
+  register: adminPWD
+  tags:
+  - ldap-common
+  
+- name: copy config file
+  template: src={{ item }}.j2 dest=/root/deploy/{{ item }} owner=root group=root mode=0644
+  with_items:
+  - base.ldif
+  - conf.ldif
+  - logLevel.ldif
+  - mod_syncprov.ldif
+  - newuser.ldif
+  - syncprov.ldif
+  - first
+  - last
+  tags:
+  - ldap-common
+  
+- name: choose the first server
+  shell: cat /root/deploy/first
+  register: firstServer
+  tags:
+  - ldap-common
+  
+- name: choose the last server
+  shell: cat /root/deploy/last
+  register: lastServer
+  tags:
+  - ldap-common
+  
+- name: copy master1.ldif
+  template: src={{ item }}.j2 dest=/root/deploy/master.ldif owner=root group=root mode=0644
+  with_items:
+  - master1.ldif
+  when: 'firstServer["stdout"] == ansible_fqdn'
+  tags:
+  - ldap-common
+
+- name: copy master2.ldif
+  template: src={{ item }}.j2 dest=/root/deploy/master.ldif owner=root group=root mode=0644
+  with_items:
+  - master2.ldif
+  when: 'lastServer["stdout"] == ansible_fqdn'
+  tags:
+  - ldap-common
+  
+- name: Initialize conf.ldif
+  shell: ldapmodify -Y EXTERNAL -H ldapi:/// -f /root/deploy/conf.ldif
+  tags:
+  - ldap-common
+  
+- name: Import cosine.ldif,nis.ldif,inetorgperson.ldif
+  shell: ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/openldap/schema/{{item}}
+  with_items:
+  - cosine.ldif
+  - nis.ldif
+  - inetorgperson.ldif
+  tags:
+  - ldap-common
+
+- name: Import base.ldif
+  shell: ldapadd -x -w {{olcRootPW}} -D "{{olcRootDN}}" -f /root/deploy/base.ldif
+  with_items:
+  - base.ldif
+  tags:
+  - ldap-common
+  
+- name: Import logLevel.ldif
+  shell: ldapmodify -Y EXTERNAL -H ldapi:/// -f /root/deploy/{{item}}
+  with_items:
+  - logLevel.ldif
+  tags:
+  - ldap-common
+  
+- name: Create /var/log/slapd.log
+  file: path=/var/log/slapd.log state=touch owner=ldap group=ldap mode=0644
+  tags:
+  - ldap-common
+
+- name: Restart slapd
+  systemd: name=slapd state=restarted
+  tags:
+  - ldap-common    
+ 
+- name: Configure the HA-AA
+  shell: ldapadd -Y EXTERNAL -H ldapi:/// -f /root/deploy/{{item}}
+  with_items:
+  - mod_syncprov.ldif
+  - syncprov.ldif
+  - master.ldif
+  tags:
+  - ldap-common
+ 
+- name: Configure Keepalived
+  copy: src={{item}} dest=/etc/keepalived/{{item}} owner=root group=root mode=0755
+  with_items:
+  - monitor.sh
+  - start.sh
+  - stop.sh
+  tags:
+  - ldap-common
+
+- name: choose the keepalived1 server
+  shell: cat /root/deploy/first
+  register: keepalived1
+  tags:
+  - ldap-common
+  
+- name: choose the keepalived2 server
+  shell: cat /root/deploy/last
+  register: keepalived2
+  tags:
+  - ldap-common  
+  
+- name: Configure keepalived1.conf
+  template: src=keepalived1.conf.j2 dest=/etc/keepalived/keepalived.conf owner=root group=root mode=0644
+  when: 'keepalived1["stdout"] == ansible_fqdn'
+  tags:
+  - ldap-common
+  
+- name: Configure keepalived2.conf
+  template: src=keepalived2.conf.j2 dest=/etc/keepalived/keepalived.conf owner=root group=root mode=0644
+  when: 'keepalived2["stdout"] == ansible_fqdn'
+  tags:
+  - ldap-common
+ 
+- name: start keepalived service
+  systemd: name={{ item }} state=started enabled=yes daemon-reload=yes
+  with_items:
+  - keepalived
+  tags:
+  - ldap-common
+  
+- name: install package for phpldapadmin
+  yum: name={{ item }} state=present skip_broken=yes
+  with_items:
+  - httpd
+  - php
+  - php-ldap
+  - php-gd
+  - php-mbstring
+  - php-pear
+  - php-bcmath
+  - php-xml
+  tags:
+  - ldap-common
+  
+- name: Download phpldapadmin-1.2.3.tgz
+  unarchive: 
+    src: http://{{ repository_server[0]['ip'] }}:{{ repository_server[0]['port'] }}/tools/common/phpldapadmin-1.2.3.tgz 
+    dest: /var/www/html 
+    copy: no
+    mode: 0644
+  tags:
+  - ldap-common
+  
+- name: Rename phpldapadmin-1.2.3
+  shell: mv /var/www/html/phpldapadmin-1.2.3 /var/www/html/phpldapadmin
+  tags:
+  - ldap-common
+  
+- name: Chmod /var/www/html/phpldapadmin
+  shell: chmod -R 755 /var/www/html/phpldapadmin
+  tags:
+  - ldap-common
+  
+- name: Configure config.php
+  template: src=config.php.j2 dest=/var/www/html/phpldapadmin/config/config.php owner=root group=root mode=0644
+  tags:
+  - ldap-common
+ 
+- name: start httpd service
+  systemd: name=httpd state=started daemon-reload=yes
+  tags:
+  - ldap-common 
+
+

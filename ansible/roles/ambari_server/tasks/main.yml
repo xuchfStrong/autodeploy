@@ -1,0 +1,118 @@
+---
+- name: install Mysql5.7
+  yum: name=mysql-server state=present
+  tags:
+  - ambari-server
+  - ambari-server-mysql
+
+- name: mysqld --initialize
+  shell: mysqld --initialize
+  tags:
+  - ambari-server
+  - ambari-server-mysql
+  
+- name: change owner of /var/lib/mysql
+  file: path=/var/lib/mysql mode=0755 owner=mysql group=mysql state=directory recurse=true
+  tags:
+  - ambari-server
+  - ambari-server-mysql
+  
+- name: start mysql
+  service: name=mysqld enabled=yes state=started
+  tags:
+  - ambari-server
+  - ambari-server-mysql
+  
+- name: Modify /etc/python/cert-verification.cfg
+  lineinfile: dest=/etc/python/cert-verification.cfg regexp="^verify" line="verify=disable"
+  tags:
+  - ambari-server
+  - ambari-server-mysql
+  
+- name: install ambari-server package
+  yum: name=ambari-server state=present
+  tags:
+  - ambari-server
+  - ambari-server-rpm
+
+- name: run ambari setup command
+  shell: /usr/sbin/ambari-server setup -j /usr/java/default --jdbc-driver /usr/share/java/mysql-connector-java.jar --jdbc-db mysql
+  args:
+    creates: /var/lib/.ansible_ambari_server_dbinitialized
+  tags:
+  - ambari-server
+  - ambari-server-init
+
+- name: configure /etc/ambari-server/conf/ambari.properties and password.dat
+  template: src={{ item }}.j2 dest=/etc/ambari-server/conf/{{ item }} mode=0644 owner=root group=root backup=yes
+  with_items:
+  - ambari.properties
+  - password.dat
+  tags:
+  - ambari-server
+  - ambari-server-conf
+
+- name: copy dbinit scripts to /root/deploy
+  template: src={{ item }}.j2 dest=/root/deploy/{{ item }} mode=0755 owner=root group=root
+  with_items:
+  - ambari_server_db_init.sh
+  tags:
+  - ambari-server
+  - ambari-server-init
+
+- name: run ambari_server_db_init.sh
+  shell: /root/deploy/ambari_server_db_init.sh
+  args:
+    creates: /var/lib/.ansible_ambari_server_dbinitialized
+  tags:
+  - ambari-server
+  - ambari-server-init
+  
+- name: install elel-release
+  yum: name=http://{{ repository_server[0]['ip'] }}:{{ repository_server[0]['port'] }}/tools/common/epel-release-latest-7.noarch.rpm
+  tags:
+  - ambari-server
+  - ambari-server-kylin
+  
+- name: delete epel.repo and epel-testing.repo
+  file: path=/etc/yum.repos.d/{{ item }} state=absent
+  with_items:
+  - epel.repo
+  - epel-testing.repo
+  tags:
+  - ambari-server
+  - ambari-server-kylin
+  
+- name: unarchive hdp-2.6-KYLIN-2.5.2-service.tar.gz
+  unarchive: src=http://{{ repository_server[0]['ip'] }}:{{ repository_server[0]['port'] }}/tools/kylin/hdp-2.6-KYLIN-2.5.2-service.tar.gz
+  args:
+    dest: /var/lib/ambari-server/resources/stacks/HDP/2.6/services/
+    #如果文件夹存在就不解压
+    creates: /var/lib/ambari-server/resources/stacks/HDP/2.6/services/KYLIN
+    copy: no
+  tags:
+  - ambari-server
+  - ambari-server-kylin
+
+- name: copy /var/lib/ambari-server/resources/stacks/HDP/2.6/services/KYLIN/configuration/kylin.xml
+  copy: src=kylin.xml dest=/var/lib/ambari-server/resources/stacks/HDP/2.6/services/KYLIN/configuration/kylin.xml owner=root group=root mode=0644
+  with_items:
+  - kylin.xml
+  tags:
+  - ambari-server
+  - ambari-server-kylin
+  
+- name: configure kylin.xml
+  replace:
+    path: /var/lib/ambari-server/resources/stacks/HDP/2.6/services/KYLIN/configuration/kylin.xml
+    regexp: "repository_server"
+    replace: "{{ repository_server[0]['ip'] }}:{{ repository_server[0]['port'] }}"
+  tags:
+  - ambari-server
+  - ambari-server-kylin
+  
+- name: start ambari-server service
+  service: name=ambari-server enabled=yes state=started
+  tags:
+  - ambari-server
+  - ambari-server-service

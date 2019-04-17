@@ -1,0 +1,1 @@
+db.runCommand({"addShard":"myShard_1/{% for i in mongodb %}{% if loop.first %}{{ i['ip']}}{% endif %}{% endfor %}:27018" ,"maxsize":1024});

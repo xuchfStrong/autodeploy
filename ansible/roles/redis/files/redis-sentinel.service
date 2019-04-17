@@ -1,0 +1,18 @@
+[Unit]
+Description=Redis Sentinel
+After=network.target
+Documentation=https://redis.io/documentation
+
+[Service]
+Type=forking
+PIDFile=/var/run/redis-sentinel.pid
+Environment="OPTIONS=/etc/redis/sentinel.conf"
+ExecStart=/usr/local/bin/redis-sentinel $OPTIONS
+ExecReload=/bin/kill -s HUP $MAINPID
+#ExecStop=/bin/kill -s QUIT $MAINPID
+ExecStop=/usr/local/bin/redis-cli -h 127.0.0.1 -p 26379 shutdown
+RestartSec=2s
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

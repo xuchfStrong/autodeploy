@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+# DBInit for new ambari server mysql installation
+
+password="{{ database['users']['root'] }}"
+dbsql="Ambari-DDL-MySQL-CREATE.sql"
+markfile="/var/lib/.ansible_ambari_server_dbinitialized"
+temp_pass=`grep 'temporary password' /var/log/mysqld.log | awk -F' ' '{print $NF}'`
+
+# check markfile
+if [[ -f ${markfile} ]]; then
+  exit 0
+fi
+
+# check if mysql is not running then try to start it
+if ! $(ps aux |grep mysqld |grep -v grep); then
+  /bin/systemctl start mysqld.service
+fi
+
+# check if failed to start mysql then quit with return value 2
+if [[ $? -ne 0 ]]; then
+  exit 2
+fi
+
+# init the mysql database
+dbsqldir="/var/lib/ambari-server/resources/"
+cd ${dbsqldir}/
+
+if [[ -f ${dbsql} ]]; then
+  # init root user
+  mysql --connect-expired-password -uroot -p"${temp_pass}" -e "alter user 'root'@'localhost' identified by '${password}';"
+  mysql -uroot -p"${password}" -e "grant all on *.* to root@'localhost' identified by '${password}';"
+  mysql -uroot -p"${password}" -e "grant all on *.* to root@'127.0.0.1' identified by '${password}';"
+  mysql -uroot -p"${password}" -e "grant all on *.* to root@'%' identified by '${password}';"
+  mysql -uroot -p"${password}" -e "flush privileges;"
+  # create ambari database
+  mysql -uroot -p"${password}" -e "create database if not exists ambari character set utf8 collate utf8_bin;"
+  if [[ $? -eq 0 ]]; then
+    # create ambari database user credential
+    mysql -uroot -p"${password}" -e "grant all on ambari.* to ambari@'localhost' identified by '{{ database['users']['ambari'] }}';"
+    mysql -uroot -p"${password}" -e "grant all on ambari.* to ambari@'127.0.0.1' identified by '{{ database['users']['ambari'] }}';"
+    mysql -uroot -p"${password}" -e "grant all on ambari.* to ambari@'%' identified by '{{ database['users']['ambari'] }}';"
+    mysql -uroot -p"${password}" -e "flush privileges;"
+    # init ambari database
+    mysql -uroot -p"${password}" ambari < ${dbsql}
+  fi
+fi
+
+if [[ $? -eq 0 ]]; then
+  touch ${markfile}
+fi

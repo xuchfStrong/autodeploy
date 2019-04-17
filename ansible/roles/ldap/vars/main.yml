@@ -1,0 +1,10 @@
+---
+floap_ip: "192.168.0.54"
+dc: "dc=chengdu,dc=jieyundata,dc=com"
+
+# adminUser这里只输入管理员用户名。如下输入的为Manager，则最后会将olcRooDN组合为："cn=Manager,dc=chengdu,dc=jieyundata,dc=com"
+# olcRootPW为管理员密码。
+# 管理员登录的时候就用DN(cn=Manager,dc=chengdu,dc=jieyundata,dc=com)和密码(qwe123)登录
+adminUser: "Manager"
+olcRootPW: "qwe123"
+olcRootDN: "cn={{ adminUser }},{{ dc }}"

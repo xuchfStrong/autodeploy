@@ -1,0 +1,117 @@
+---
+- name: create /data,/root/deploy and /etc/mongod directories
+  file: path={{ item }} state=directory owner=root group=root mode=0755
+  with_items:
+  - /data
+  - /root/deploy
+  - /etc/mongod
+  tags:
+  - mongo-common
+
+- name: install mongo rpm package
+  yum: name=http://{{ repository_server[0]['ip'] }}:{{ repository_server[0]['port'] }}/tools/mongodb/{{ item }}.rpm state=present
+  with_items:
+  - mongodb-org-tools-4.0.4-1.el7.x86_64
+  - mongodb-org-shell-4.0.4-1.el7.x86_64
+  - mongodb-org-server-4.0.4-1.el7.x86_64
+  - mongodb-org-mongos-4.0.4-1.el7.x86_64
+  tags:
+  - mongo-common
+
+- name: remove mongodb default configuration
+  file: path={{ item }} state=absent
+  with_items:
+  - /usr/lib/systemd/system/mongod.service
+  - /etc/mongod.conf
+  - /etc/systemd/system/multi-user.target.wants/mongod.service
+  - /var/log/mongodb/mongod.log
+  
+- name: create /data/mongo/shard and /data/mongo/config/ directories
+  file: path={{ item }} state=directory owner=mongod group=mongod mode=0755
+  with_items:
+  - /data/mongo
+  - /data/mongo/shard
+  - /data/mongo/config
+  tags:
+  - mongo-common
+  
+- name: copy mongodb service script
+  copy: src={{ item }} dest=/usr/lib/systemd/system/{{ item }} owner=root group=root mode=0644
+  with_items:
+  - mongod-config.service
+  - mongod-shard.service
+  - mongos.service
+  tags:
+  - mongo-common
+  - mongo-common-conf
+  
+- name: configure mongodb
+  template: src={{ item }}.j2 dest=/etc/mongod/{{ item }} owner=root group=root mode=0644
+  with_items:
+  - mongod-config.conf
+  - mongod-shard.conf
+  - mongos.conf
+  tags:
+  - mongo-common
+  - mongo-common-conf
+
+- name: copy mongodb initialize js file
+  template: src={{ item }}.j2 dest=/root/deploy/{{ item }} owner=root group=root mode=0644
+  with_items:
+  - addShard.js
+  - configSvr.js
+  - shardSvr.js
+  - mongos
+  tags:
+  - mongo-common
+  - mongo-common-conf
+  
+- name: choose the mongos server
+  shell: cat /root/deploy/mongos
+  register: returnmsg
+  tags:
+  - mongo-common
+  
+- name: start mongod-config and mongod-shard service
+  systemd: name={{ item }} state=started enabled=yes daemon-reload=yes
+  with_items:
+  - mongod-config
+  - mongod-shard
+  tags:
+  - mongo-common
+  - mongo-common-start
+  
+- name: initialize mongod-config cluster
+  shell: mongo --port 27019 /root/deploy/configSvr.js
+  when: 'returnmsg["stdout"] == ansible_fqdn'
+  tags:
+  - mongo-common
+  - mongo-common-start
+  
+- name: initialize mongod-shard cluster
+  shell: mongo --port 27018 /root/deploy/shardSvr.js
+  when: 'returnmsg["stdout"] == ansible_fqdn'
+  tags:
+  - mongo-common
+  - mongo-common-start
+
+- name: start mongos service
+  systemd: name=mongos state=started enabled=yes daemon-reload=yes
+  when: 'returnmsg["stdout"] == ansible_fqdn'
+  tags:
+  - mongo-common
+  - mongo-common-mongos-start
+  
+- name: initialize mongos
+  shell: mongo --port 27017 admin /root/deploy/addShard.js
+  when: 'returnmsg["stdout"] == ansible_fqdn'
+  tags:
+  - mongo-common
+  - mongo-common-mongos-start
+  
+- name: clear /root/deploy directory
+  file: path=/root/deploy state=absent
+  tags:
+  - mongo-common
+  - mongo-common-mongos-start
+  

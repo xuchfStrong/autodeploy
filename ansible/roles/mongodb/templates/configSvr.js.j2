@@ -1,0 +1,13 @@
+rs.initiate(
+  {
+    _id: "configRS",
+    configsvr: true,
+    members: [
+{% for i in mongodb %}
+      { _id: {{ loop.index0 }}, host : "{{ i['ip']+':27019'}}" }{% if not loop.last %},
+{% endif %}
+{% endfor %}
+
+    ]
+  }
+)

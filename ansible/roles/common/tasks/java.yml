@@ -1,0 +1,36 @@
+---
+- name: install jdk rpm package
+  yum: name=http://{{ repository_server[0]['ip'] }}:{{ repository_server[0]['port'] }}/tools/java/jdk-8u191-linux-x64.rpm state=present
+  tags:
+  - common
+  - common-java
+  
+- name: create directory /usr/share/java
+  file: path=/usr/share/java state=directory owner=root group=root mode=0755
+  tags:
+  - common
+  - common-java
+  
+- name: download jdbc driver package to /usr/share/java
+  get_url: url=http://{{ repository_server[0]['ip'] }}:{{ repository_server[0]['port'] }}/tools/java/mysql-connector-java-5.1.47.jar dest=/usr/share/java/mysql-connector-java-5.1.47.jar owner=root group=root 
+  tags:
+  - common
+  - common-java
+
+- name: create soft link for jdbc driver
+  file: src=/usr/share/java/mysql-connector-java-5.1.47.jar dest=/usr/share/java/mysql-connector-java.jar owner=root group=root state=link
+  tags:
+  - common
+  - common-java
+
+- name: Modify /etc/profile
+  lineinfile: dest=/etc/profile line="export JAVA_HOME=/usr/java/default"
+  tags:
+  - common
+  - common-java
+  
+- name: source /etc/profile
+  shell: source /etc/profile
+  tags:
+  - common
+  - common-java

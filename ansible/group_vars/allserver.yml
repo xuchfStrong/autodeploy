@@ -1,0 +1,10 @@
+servers:
+- hostname: hdp-dev-01.jieyun.com
+  ip: 192.168.0.51
+  root_passwd: cdsf119
+- hostname: hdp-dev-02.jieyun.com
+  ip: 192.168.0.52
+  root_passwd: cdsf119
+- hostname: hdp-dev-03.jieyun.com
+  ip: 192.168.0.53
+  root_passwd: cdsf119

@@ -1,0 +1,17 @@
+---
+- name: restart ntpd
+  service: name=ntpd state=restarted
+  tags:
+  - common
+  - common-etc
+  - common-etc-ntpd
+
+- name: restart network
+  service: name={{ item }} state=restarted
+  with_items:
+  - network
+  - NetworkManager
+  tags:
+  - common
+  - common-etc
+

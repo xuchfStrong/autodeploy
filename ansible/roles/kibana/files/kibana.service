@@ -1,0 +1,20 @@
+[Unit]
+Description=Kibana
+Wants=network-online.target
+After=network-online.target
+ 
+[Service]
+Type=simple
+User=elastic
+Group=elastic
+# Load env vars from /etc/default/ and /etc/sysconfig/ if they exist.
+# Prefixing the path with '-' makes it try to load, but if the file doesn't
+# exist, it continues onward.
+EnvironmentFile=-/etc/default/kibana
+EnvironmentFile=-/etc/sysconfig/kibana
+ExecStart=/opt/bigdata/kibana-6.4.3-linux-x86_64/bin/kibana "-c /opt/bigdata/kibana-6.4.3-linux-x86_64/config/kibana.yml"
+Restart=on-failure
+WorkingDirectory=/tmp
+
+[Install]
+WantedBy=multi-user.target

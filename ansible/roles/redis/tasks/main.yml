@@ -1,0 +1,99 @@
+---
+- name: create /data/redis,/root/deploy directories
+  file: path={{ item }} state=directory owner=root group=root mode=0755
+  with_items:
+  - /data/redis
+  - /root/deploy
+  tags:
+  - redis-common
+
+- name: install redis and nutcracker rpm package
+  yum: name=http://{{ repository_server[0]['ip'] }}:{{ repository_server[0]['port'] }}/tools/redis/{{ item }} state=present
+  with_items:
+  - nutcracker-0.4.1-el7.x86_64.rpm
+  - redis-5.0.3-el7.x86_64.rpm
+  tags:
+  - redis-common
+
+- name: copy redis service file
+  copy: src={{ item }} dest=/usr/lib/systemd/system/{{ item }} owner=root group=root mode=0644
+  with_items:
+  - nutcracker.service
+  - redis-server.service
+  - redis-sentinel.service
+  tags:
+  - redis-common
+  - redis-common-conf
+
+- name: reload services
+  shell: /usr/bin/systemctl daemon-reload  
+  tags:
+  - redis-common
+  - redis-common-conf  
+  
+- name: choose the redis master
+  template: src={{ item }}.j2 dest=/root/deploy/{{ item }} owner=root group=root mode=0644
+  with_items:
+  - redis-master
+  tags:
+  - redis-common
+  - redis-common-conf
+  
+- name: choose the redis master
+  shell: cat /root/deploy/redis-master
+  register: returnmsg
+  tags:
+  - redis-common
+  
+- name: configure redis-server master
+  template: src=redis-master.conf.j2 dest=/etc/redis/redis.conf owner=root group=root mode=0644
+  when: 'returnmsg["stdout"] == ansible_fqdn'
+  tags:
+  - redis-common
+  - redis-common-conf
+  
+- name: configure redis-server slave
+  template: src=redis-slave.conf.j2 dest=/etc/redis/redis.conf owner=root group=root mode=0644
+  when: 'returnmsg["stdout"] != ansible_fqdn'
+  tags:
+  - redis-common
+  - redis-common-conf
+
+- name: configure redis-sentinel
+  template: src={{ item }}.j2 dest=/etc/redis/{{ item }} owner=root group=root mode=0644
+  with_items:
+  - sentinel.conf
+  tags:
+  - redis-common
+  - redis-common-conf  
+  
+- name: configure nutcracker
+  template: src={{ item }}.j2 dest=/etc/{{ item }} owner=root group=root mode=0644
+  with_items:
+  - nutcracker.yml
+  tags:
+  - redis-common
+  - redis-common-conf    
+
+- name: start redis-server service
+  systemd: name=redis-server state=started enabled=yes daemon-reload=yes
+  tags:
+  - redis-common
+  - redis-common-start
+  
+- name: start redis-sentinel service
+  systemd: name=redis-sentinel state=started enabled=yes daemon-reload=yes
+  tags:
+  - redis-common
+  - redis-common-start
+  
+- name: start nutcracker service
+  systemd: name=nutcracker state=started enabled=yes daemon-reload=yes
+  tags:
+  - redis-common
+  - redis-common-start
+  
+- name: clear /root/deploy directory
+  file: path=/root/deploy state=absent
+  tags:
+  - redis-common

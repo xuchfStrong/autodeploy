@@ -1,0 +1,95 @@
+---
+- name: create /opt/bigdata and /root/deploy directories
+  file: path={{ item }} state=directory owner=root group=root mode=0755
+  with_items:
+  - /opt/bigdata
+  - /root/deploy
+  tags:
+  - elastic-kibana
+
+- name: create elastic user group
+  group: name=elastic state=present
+  tags:
+  - elastic-kibana
+
+- name: create elastic user
+  user: name=elastic group=elastic createhome=no shell=/sbin/nologin state=present
+  tags:
+  - elastic-kibana
+
+- name: download logstash
+  get_url:
+    url: http://{{ repository_server[0]['ip'] }}:{{ repository_server[0]['port'] }}/tools/ELK/logstash-6.4.3.tar.gz
+    dest: /root/deploy
+  tags:
+  - elastic-kibana
+
+- name: unarchive logstash
+  shell: tar xzf /root/deploy/logstash-6.4.3.tar.gz
+  args:
+    chdir: /opt/bigdata
+    creates: /opt/bigdata/logstash-6.4.3
+  tags:
+  - elastic-logstash
+
+- name: create logstash logs and run directories
+  file: path=/opt/bigdata/logstash-6.4.3/{{ item }} state=directory owner=elastic group=elastic
+  with_items:
+  - logs
+  - run
+  tags:
+  - elastic-logstash
+
+- name: set /opt/bigdata/logstash-6.4.3 permissions
+  file: path=/opt/bigdata/logstash-6.4.3 state=directory owner=elastic group=elastic recurse=yes
+  tags:
+  - elastic-logstash
+
+- name: download kibana
+  get_url:
+    url: http://{{ repository_server[0]['ip'] }}:{{ repository_server[0]['port'] }}/tools/ELK/kibana-6.4.3-linux-x86_64.tar.gz
+    dest: /root/deploy
+  tags:
+  - elastic-kibana
+
+- name: unarchive kibana
+  shell: tar xzf /root/deploy/kibana-6.4.3-linux-x86_64.tar.gz
+  args:
+    chdir: /opt/bigdata
+    creates: /opt/bigdata/kibana-6.4.3-linux-x86_64
+  tags:
+  - elastic-kibana
+
+- name: create kibana logs and run directories
+  file: path=/opt/bigdata/kibana-6.4.3-linux-x86_64/{{ item }} state=directory owner=elastic group=elastic
+  with_items:
+  - logs
+  - run
+  tags:
+  - elastic-kibana
+
+- name: configure kibana
+  template: src=kibana.yml.j2 dest=/opt/bigdata/kibana-6.4.3-linux-x86_64/config/kibana.yml backup=yes
+  notify: restart kibana
+  tags:
+  - elastic-kibana-conf
+
+- name: set /opt/bigdata/kibana-6.4.3-linux-x86_64 permissions
+  file: path=/opt/bigdata/kibana-6.4.3-linux-x86_64 state=directory owner=elastic group=elastic recurse=yes
+  tags:
+  - elastic-kibana-conf
+
+- name: copy kibana service init script
+  copy: src=kibana.service dest=/usr/lib/systemd/system/kibana.service owner=root group=root mode=0644
+  tags:
+  - elastic-kibana-service
+
+- name: start kibana service
+  systemd: name=kibana state=started enabled=yes daemon-reload=yes
+  tags:
+  - elastic-kibana-service
+  
+- name: clear /root/deploy directory
+  file: path=/root/deploy state=absent
+  tags:
+  - elastic-kibana

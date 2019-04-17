@@ -1,0 +1,35 @@
+---
+- hosts: ambari_server
+  roles:
+  - common
+  - ambari_server
+
+- hosts: ambari_agent
+  roles:
+  - common
+  - ambari_agent
+ 
+- hosts: elasticsearch
+  roles:
+  - common
+  - elasticsearch
+  
+- hosts: kibana
+  roles:
+  - common
+  - kibana
+  
+- hosts: mongodb
+  roles:
+  - common
+  - mongodb
+  
+- hosts: redis
+  roles:
+  - common
+  - redis
+  
+- hosts: ldap
+  roles:
+  - common
+  - ldap

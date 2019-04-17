@@ -1,0 +1,17 @@
+dn: {{ dc }}
+dc: chengdu
+objectClass: top
+objectClass: domain
+
+dn: {{olcRootDN}}
+objectClass: organizationalRole
+cn: Manager
+description: LDAP Manager
+
+dn: ou=Users,{{ dc }}
+objectClass: organizationalUnit
+ou: Users
+
+dn: ou=Group,{{ dc }}
+objectClass: organizationalUnit
+ou: Group

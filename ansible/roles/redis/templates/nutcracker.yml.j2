@@ -1,0 +1,15 @@
+alpha:
+  listen: 0.0.0.0:22121
+  hash: fnv1a_64
+  distribution: ketama
+  auto_eject_hosts: false
+  redis: true
+  server_retry_timeout: 30000
+  server_failure_limit: 1
+  server_connections: 50
+  sentinel:
+{% for i in redis %}
+   - {{ i['ip']}}:26379
+{% endfor %}
+  servers:
+   - {% for i in redis %}{% if loop.first %}{{ i['ip']}}{% endif %}{% endfor %}:6379:1

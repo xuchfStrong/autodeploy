@@ -1,0 +1,34 @@
+<?php
+$config->custom->appearance['friendly_attrs'] = array(
+	'facsimileTelephoneNumber' => 'Fax',
+	'gid'                      => 'Group',
+	'mail'                     => 'Email',
+	'telephoneNumber'          => 'Telephone',
+	'uid'                      => 'User Name',
+	'userPassword'             => 'Password'
+);
+
+/*********************************************
+ * Define your LDAP servers in this section  *
+ *********************************************/
+
+$servers = new Datastore();
+
+/* $servers->NewServer('ldap_pla') must be called before each new LDAP server
+   declaration. */
+$servers->newServer('ldap_pla');
+
+/* A convenient name that will appear in the tree viewer and throughout
+   phpLDAPadmin to identify this LDAP server to users. */
+$servers->setValue('server','name','My LDAP Server');
+
+$servers->newServer('ldap_pla');
+$servers->setValue('server','name','LDAP Server');
+$servers->setValue('server','host','{{floap_ip}}');
+$servers->setValue('server','port',389);
+$servers->setValue('server','base',array('{{dc}}'));
+$servers->setValue('login','auth_type','cookie');
+$servers->setValue('login','bind_id','');
+$servers->setValue('login','bind_pass','');
+$servers->setValue('server','tls',false);
+?>

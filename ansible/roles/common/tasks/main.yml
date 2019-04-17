@@ -1,0 +1,4 @@
+---
+- import_tasks: base.yml
+- import_tasks: java.yml
+- import_tasks: misc.yml

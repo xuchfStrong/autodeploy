@@ -1,0 +1,41 @@
+#!/bin/bash
+
+curr=$(cd `dirname $0`; pwd)
+CFGFILE=${curr}/conf/nutcracker.yml
+PIDFILE=/var/run/nutcracker.pid
+
+if [ -f ${PIDFILE} ];then
+    pid=`cat ${PIDFILE}`
+    pc=`ps -ef | grep ${pid} | grep -v grep | wc -l`
+else
+    pc=0
+fi
+
+if [ ${pc} -lt 1 ]; then
+
+    tmp=`grep -A50 "servers:" ${CFGFILE} | grep "-"`
+    tmp=`echo $tmp|sed -e "s/-//g"`
+
+    OLD_IFS="$IFS"
+    IFS=","
+    arr=($tmp)
+    IFS="$OLD_IFS"
+
+    for s in ${arr[@]}
+    do
+        ip=`echo $s|awk -F':' '{print $1}'`
+        port=`echo $s|awk -F':' '{print $2}'`
+        weight=`echo $s|awk -F':' '{print $3}'`
+
+        ${curr}/redis-cli --raw -h $ip -p $port info 1>/dev/null 2>/dev/null   #查询节点状态
+        if [ $? == 0 ]; then
+            role=`${curr}/redis-cli --raw -h $ip -p $port info|grep role| sed -e 's/\r//g' |awk -F':' '{print $2}'`
+            if [ "x${role}" == "xslave" ]; then
+                master_ip=`${curr}/redis-cli --raw -h $ip -p $port info|grep master_host|  sed -e 's/\r//g' |awk -F':' '{print $2}'`
+                master_port=`${curr}/redis-cli --raw -h $ip -p $port info|grep master_port| sed -e 's/\r//g' |awk -F':' '{print $2}'`
+
+                sed -i "s/$ip:$port:$weight/$master_ip:$master_port:$weight/g" ${CFGFILE}
+            fi
+        fi
+    done
+fi

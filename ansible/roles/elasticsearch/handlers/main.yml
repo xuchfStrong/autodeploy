@@ -1,0 +1,10 @@
+---
+- name: restart elasticsearch
+  service: name=elasticsearch state=restarted
+  tags:
+  - elastic-common
+  - elastic-common-elasticsearch
+  - elastic-common-elasticsearch-conf
+  - elastic-common-elasticsearch-initializer
+  - elastic-common-elasticsearch-plugins
+  - elastic-common-elasticsearch-service

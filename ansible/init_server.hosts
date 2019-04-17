@@ -1,0 +1,4 @@
+[allserver]
+192.168.0.51 hostname=hdp-dev-01.jieyun.com ansible_connection=ssh ansible_ssh_user=root ansible_ssh_pass="cdsf119" 
+192.168.0.52 hostname=hdp-dev-02.jieyun.com ansible_connection=ssh ansible_ssh_user=root ansible_ssh_pass="cdsf119"
+192.168.0.53 hostname=hdp-dev-03.jieyun.com ansible_connection=ssh ansible_ssh_user=root ansible_ssh_pass="cdsf119"

@@ -1,0 +1,7 @@
+[ambari_server]
+[kibana]
+[ambari_agent]
+[elasticsearch]
+[mongodb]
+[redis]
+[ldap]

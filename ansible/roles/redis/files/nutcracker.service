@@ -1,0 +1,19 @@
+[Unit]
+Description=nutcracker
+After=network.target redis-server.service
+Wants=redis-server.service
+Documentation=https://rubygems.org/gems/nutcracker/
+
+[Service]
+Type=forking
+Environment="PIDFile=/var/run/nutcracker.pid"
+Environment="CFGFile=/etc/nutcracker.yml"
+ExecStart=/usr/local/bin/nutcracker -d -c $CFGFile -p $PIDFile
+ExecStartPre=/usr/bin/chmod 755 /usr/local/bin/nutcracker-cfg
+ExecStartPre=/usr/bin/sh /usr/local/bin/nutcracker-cfg
+RestartSec=2s
+Restart=on-failure
+
+
+[Install]
+WantedBy=multi-user.target

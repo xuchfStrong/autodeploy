@@ -1,0 +1,96 @@
+---
+- name: configure repo files
+  template: src={{ item }}.j2 dest=/etc/yum.repos.d/{{ item }} mode=0644 owner=root group=root
+  with_items:
+  - CentOS-Base.repo
+  - ambari.repo
+  - hdp.repo
+  - hdp-gpl.repo
+  - zabbix.repo
+  tags:
+  - common
+  - common-repo
+
+- name: clear yum cache
+  shell: yum clean all
+  tags:
+  - common
+  - common-repo
+  
+- name: delete yum cache file
+  file: path=/var/cache/yum state=absent
+  tags:
+  - common
+  - common-repo
+ 
+- name: install basic packages
+  yum: name={{ item }}
+  with_items:
+  - gcc
+  - ntp
+  - libselinux-python
+  - libevent
+  - libtirpc-devel
+  tags:
+  - common
+  - common-yum
+
+- name: start ntpd service
+  service: name=ntpd enabled=yes state=started
+  tags:
+  - common
+  - common-yum
+  - common-ntpd
+  
+- name: install ntpd
+  yum: name=ntp state=present
+  tags:
+  - common
+  - common-etc
+  - common-etc-ntpd
+
+- name: configure /etc/ntp.conf
+  template: src=etc_ntp.conf.j2 dest=/etc/ntp.conf owner=root group=root mode=0644
+  notify: restart ntpd 
+  tags:
+  - common
+  - common-etc
+  - common-etc-ntpd
+  
+- name: configure /etc/sysctl.conf
+  template: src=etc_sysctl.conf.j2 dest=/etc/sysctl.conf mode=0644 owner=root group=root 
+  register: sysctl_conf
+  tags:
+  - common
+  - common-etc
+  
+- name: run command sysctl -p
+  shell: sysctl -p
+  when: sysctl_conf|changed
+  tags:
+  - common
+  - common-etc
+  
+- name: configure /etc/security/limits.conf
+  template: src=limits.conf.j2 dest=/etc/security/limits.conf mode=0644 owner=root group=root 
+  tags:
+  - common
+  - common-etc
+  
+- name: Disbale UseDNS for sshd
+  lineinfile: dest=/etc/ssh/sshd_config regexp='#UseDNS yes' line='UseDNS no'
+  tags:
+  - common
+  - common-etc
+
+- name: Set dns=none in /etc/NetworkManager/NetworkManager.conf
+  lineinfile: dest=/etc/NetworkManager/NetworkManager.conf insertafter='\[main\]' line='dns=none'
+  notify: restart network
+  tags:
+  - common
+  - common-etc
+ 
+- name: create /root/deploy directory
+  file: path=/root/deploy mode=0755 owner=root group=root state=directory
+  tags:
+  - common

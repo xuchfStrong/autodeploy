@@ -1,0 +1,13 @@
+[zabbix]
+name=Zabbix Official Repository - $basearch
+baseurl=http://{{ repository_server[0]['ip'] }}:{{ repository_server[0]['port'] }}/zabbix/4.0/rhel/7/x86_64/
+enabled=1
+gpgcheck=0
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-ZABBIX-A14FE591
+
+[zabbix-non-supported]
+name=Zabbix Official Repository non-supported - $basearch 
+baseurl=http://{{ repository_server[0]['ip'] }}:{{ repository_server[0]['port'] }}/zabbix/non-supported/rhel/7/x86_64/
+enabled=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-ZABBIX
+gpgcheck=0

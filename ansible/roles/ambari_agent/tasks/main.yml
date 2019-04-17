@@ -1,0 +1,35 @@
+---
+- name: install ambari-agent related packages
+  yum: name={{ item }} state=present
+  with_items:
+  - ambari-agent
+  tags:
+  - ambari-agent
+  - ambari-agent-rpm
+
+- name: Modify /etc/ambari-agent/conf/ambari-agent.ini
+  lineinfile: dest=/etc/ambari-agent/conf/ambari-agent.ini insertafter='\[security\]' line='force_https_protocol=PROTOCOL_TLSv1_2'
+  tags:
+  - ambari-agent
+  - ambari-agent-rpm
+  
+- name: install elel-release
+  yum: name=http://{{ repository_server[0]['ip'] }}:{{ repository_server[0]['port'] }}/tools/common/epel-release-latest-7.noarch.rpm
+  tags:
+  - ambari-agent
+  - ambari-agent-kylin
+  
+- name: delete epel.repo and epel-testing.repo
+  file: path=/etc/yum.repos.d/{{ item }} state=absent
+  with_items:
+  - epel.repo
+  - epel-testing.repo
+  tags:
+  - ambari-agent
+  - ambari-agent-kylin
+  
+- name: start ambari-agent service
+  service: name=ambari-agent enabled=yes state=started
+  tags:
+  - ambari-agent
+  - ambari-server-start

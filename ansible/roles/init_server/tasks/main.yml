@@ -1,0 +1,75 @@
+---
+- name: configure /etc/hosts
+  template: src={{ item }}.j2 dest=/etc/{{ item }} owner=root group=root mode=0644
+  with_items:
+  - hosts
+
+- name: Set dns=none in /etc/NetworkManager/NetworkManager.conf
+  lineinfile: dest=/etc/NetworkManager/NetworkManager.conf insertafter='\[main\]' line='dns=none'
+  notify: restart network  
+  
+- name: set hostname
+  hostname: name="{{ hostname }}"  
+  
+- name: clear /root/.ssh
+  file: dest=/root/.ssh/ state=absent
+  retries: 3
+
+- name: get the run server
+  shell: hostname
+  register: run_server
+  run_once: true
+  delegate_to: localhost
+  
+- name: genrate localhost ssh-key
+  shell: ssh-keygen  -t rsa -P '' -f ~/.ssh/id_rsa 1>/dev/null 2>&1
+  when: hostname == run_server.stdout
+  
+- name: genrate authorized_keys
+  authorized_key: user=root key='{{ lookup('file', '/root/.ssh/id_rsa.pub')}}' path='/root/.ssh/authorized_keys' manage_dir=no
+  
+- name: delete known_hosts
+  file: dest=/root/.ssh/known_hosts  state=absent
+  
+- name: genrate known_hosts for IP
+  shell: ssh-keyscan -t rsa {{item}} >> /root/.ssh/known_hosts
+  with_items: 
+  - "{{ inventory_hostname }}"
+  delegate_to: localhost
+  ignore_errors: yes
+  retries: 3
+  
+- name: genrate known_hosts for short hostname
+  shell: ssh-keyscan -t rsa {{item.split('.')[0]}} >> /root/.ssh/known_hosts
+  #debug: msg="The {{ inventory_hostname }} Value is {{item.hostname.split('.')[0]}}}"
+  with_items: 
+  - "{{ hostname }}"
+  ignore_errors: yes
+  retries: 3
+  delegate_to: localhost
+  
+- name: genrate known_hosts for fqdn
+  shell: ssh-keyscan -t rsa {{item}} >> /root/.ssh/known_hosts
+  with_items: 
+  - "{{ hostname }}"
+  ignore_errors: yes
+  retries: 3
+  delegate_to: localhost
+
+- name: genrate ssh-key
+  shell: ssh-keygen  -t rsa -P '' -f ~/.ssh/id_rsa 1>/dev/null 2>&1
+  when: hostname != run_server.stdout
+  
+- name: 合并id_rsa.pub到authorized_keys中
+  shell: ssh -n {{inventory_hostname}} 'cat ~/.ssh/id_rsa.pub' >> ~/.ssh/authorized_keys
+  delegate_to: localhost
+  ignore_errors: yes
+  retries: 3
+  when: hostname != run_server.stdout
+  
+- name: 分发authorized_keys和known_hosts
+  copy: src=/root/.ssh/{{ item }}   dest=/root/.ssh/{{ item }}
+  with_items:
+  - authorized_keys
+  - known_hosts
+  when: hostname != run_server.stdout
