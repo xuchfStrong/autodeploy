@@ -46,5 +46,6 @@ urlpatterns = [
     url(r'^runtask/$', webadmin_views.runtask, name='runtask'),
     url(r'^viewlog/$', webadmin_views.viewlog, name='viewlog'),
     url(r'^favicon.ico', RedirectView.as_view(url=r'static/favicon.ico')),
+    url(r'^upload/$', webadmin_views.upload_file, name='upload_file'),
 
 ]

@@ -15,6 +15,7 @@ import sys
 import os
 import shutil
 import json
+import random
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -492,3 +493,25 @@ def pre_log(file_path):
         content = f2.read()
     os.remove(os.path.join(TASK_LOGPATH, 'ansible_tmp.log'))
     return content
+
+# 文件上传
+def upload_file(request):
+    if request.method == "POST":    # 请求方法为POST时，进行处理
+        myFile =request.FILES.get("file", None)    # 获取上传的文件，如果没有文件，则默认为None
+        if not myFile:
+            res = {
+                'code': 20001,
+                'msg': '上传失败',
+                'success': False
+            }
+        else:
+            destination = open(os.path.join(TASK_LOGPATH,myFile.name),'wb+')    # 打开特定的文件进行二进制的写操作
+            for chunk in myFile.chunks():      # 分块写入文件
+                destination.write(chunk)
+            destination.close()
+            res = {
+                'code': 20000,
+                'msg': '上传成功',
+                'success': random.choice([True, False])
+            }
+        return JsonResponse(res, safe=True)
