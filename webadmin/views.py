@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 
 from datetime import date, datetime
 from django.shortcuts import render,redirect,HttpResponse,render_to_response
-from django.http import HttpResponseRedirect, HttpResponse, JsonResponse
+from django.http import HttpResponseRedirect, HttpResponse, JsonResponse, FileResponse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 from webadmin.models import *
@@ -35,7 +35,7 @@ ANSIBLE_LOGPATH = '/var/log/ansible.log'
 
 # Create your views here.
 
-# 重写json的JSONEncoder，用来解决datetime
+# 重写json的JSONEncoder，用来解决datetime格式的问题
 class ComplexEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, datetime):
@@ -515,3 +515,16 @@ def upload_file(request):
                 'success': random.choice([True, False])
             }
         return JsonResponse(res, safe=True)
+
+# 文件下载
+def download_file(request):
+    id = request.GET.get('id')
+    if id == '1':
+        filename = 'favicon.ico'
+    else:
+        filename = 'ansible128.log'
+    file = open(os.path.join(TASK_LOGPATH, filename), 'rb')
+    response = FileResponse(file)
+    response['Content-Type'] = 'application/octet-stream'
+    response['Content-Disposition'] = 'attachment;filename=%s' %(filename)
+    return response

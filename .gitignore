@@ -1,6 +1,8 @@
 webadmin/static/
 webadmin/templates/
-
+tasklog/*.jpg
+tasklog/*.ico
+tasklog/*.png
 # Editor directories and files
 .idea
 .vscode

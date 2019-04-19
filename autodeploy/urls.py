@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """autodeploy URL Configuration
 
 The `urlpatterns` list routes URLs to views. For more information please see:
@@ -18,6 +19,7 @@ from django.contrib import admin
 from webadmin import views as webadmin_views
 from django.views.generic.base import TemplateView
 from django.views.generic.base import RedirectView
+from django.views.static import serve
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
@@ -47,5 +49,7 @@ urlpatterns = [
     url(r'^viewlog/$', webadmin_views.viewlog, name='viewlog'),
     url(r'^favicon.ico', RedirectView.as_view(url=r'static/favicon.ico')),
     url(r'^upload/$', webadmin_views.upload_file, name='upload_file'),
+    url(r'^download/$', webadmin_views.download_file, name='download_file'),
+    url(r'^medias/(?P<path>.*)$', serve, {'document_root': 'tasklog'}),  # 在tasklog目录下面放上12.jpg文件，通过http://127.0.0.1:8000/medias/12.jpg访问
 
 ]
